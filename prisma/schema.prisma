@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  REVIEWER
+}
+
+enum FormStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum SubmissionStatus {
+  RECEIVED
+  IN_REVIEW
+  SHORTLISTED
+  REJECTED
+}
+
+enum Decision {
+  YES
+  MAYBE
+  NO
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  role           UserRole  @default(REVIEWER)
+  forms          Form[]
+  evaluations    Evaluation[]
+  sessions       Session[]
+  accounts       Account[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Form {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  description     String?
+  welcomeMessage  String?
+  status          FormStatus      @default(DRAFT)
+  config          Json?
+  owner           User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId         String
+  fields          FormField[]
+  submissions     Submission[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model FormField {
+  id          String   @id @default(cuid())
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId      String
+  label       String
+  key         String
+  type        String
+  required    Boolean  @default(false)
+  helpText    String?
+  placeholder String?
+  config      Json?
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([formId, key])
+  @@index([formId, orderIndex])
+}
+
+model Submission {
+  id              String            @id @default(cuid())
+  form            Form              @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId          String
+  applicantName   String
+  applicantEmail  String?
+  resumeUrl       String?
+  answers         Json?
+  status          SubmissionStatus  @default(RECEIVED)
+  evaluation      Evaluation?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([formId, status])
+}
+
+model Evaluation {
+  id              String     @id @default(cuid())
+  submission      Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId    String     @unique
+  reviewer        User?      @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewerId      String?
+  overallScore    Int?
+  decision        Decision?
+  summary         String?
+  strengths       String?
+  risks           String?
+  aiModelVersion  String?
+  metadata        Json?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  oauth_token_secret String?
+  oauth_token        String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
