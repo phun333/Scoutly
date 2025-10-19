@@ -7,8 +7,6 @@ Scoutly, işe alım ekiplerinin başvuruları saniyeler içinde ön değerlendir
 - [Öne Çıkan Özellikler](#öne-çıkan-özellikler)
 - [Mimari ve Teknolojiler](#mimari-ve-teknolojiler)
 - [Kurulum](#kurulum)
-- [Geliştirme Akışı](#geliştirme-akışı)
-- [Veritabanı İşlemleri](#veritabanı-işlemleri)
 - [Proje Yapısı](#proje-yapısı)
 - [Katkıda Bulunma](#katkıda-bulunma)
 
@@ -37,32 +35,6 @@ Scoutly, işe alım ekiplerinin başvuruları saniyeler içinde ön değerlendir
    - `DATABASE_URL`, `AUTH_SECRET` ve entegrasyon anahtarlarını doldurun.
 4. İlk çalıştırmada Prisma istemcisini oluşturmak için postinstall betiği otomatik devreye girer; gerekirse `pnpm db:generate` komutuyla tekrar çalıştırabilirsiniz.
 
-## Geliştirme Akışı
-- Geliştirme sunucusunu başlatmak için:
-  ```bash
-  pnpm dev
-  ```
-- Üretim derlemesi:
-  ```bash
-  pnpm build
-  pnpm preview
-  ```
-- Kod kalitesi ve tip güvenliği:
-  ```bash
-  pnpm lint
-  pnpm typecheck
-  pnpm format:write
-  ```
-
-## Veritabanı İşlemleri
-- Lokal PostgreSQL’i `./start-database.sh` ile başlatın.
-- Şema değişikliklerini doğrulamak için:
-  ```bash
-  pnpm db:push      # Lokal geliştirme için
-  pnpm db:migrate   # Üretim senaryoları için migrasyon uygulama
-  pnpm db:studio    # Prisma Studio ile verileri inceleme
-  ```
-
 ## Proje Yapısı
 - `src/app`: App Router rotaları, sayfalar ve layout bileşenleri.
 - `src/server`: Sunucu tarafı mantığı, tRPC router’ları ve NextAuth yapılandırması.
@@ -70,9 +42,12 @@ Scoutly, işe alım ekiplerinin başvuruları saniyeler içinde ön değerlendir
 - `prisma`: `schema.prisma`, migrasyonlar ve tohumlama betikleri.
 - `public`: Logolar, banner ve statik varlıklar.
 
+## Todo List
+- [ ] Daha iyi bir ürün analizi ve puanlama için araştırması yapılmalı
+- [ ] Form sonrası üretilen linkte, display name ye göre değilde unique id ye göre yapılandırılması (daha iyi bir güvenlik)
+- [ ] Daha iyi bir landing page (vcombinator ahhh landing page lazım ya)
+
 ## Katkıda Bulunma
 Katkılar memnuniyetle karşılanır! Bir öneriniz veya düzeltmeniz varsa:
-- Issue açarak problemi veya geliştirme fikrinizi paylaşın.
-- Fork alıp değişikliklerinizi yapın, testleri çalıştırın (`pnpm check`), ardından bir pull request gönderin.
-
-Scoutly’ye katkı sağlayan herkese teşekkürler. Birlikte işe alım süreçlerini daha adil ve hızlı hâle getirebiliriz.
+- Issue açarak problemi veya geliştirme fikrinizi paylaşın ya da linkedin uzerinden yazabilirsiniz.
+- Üstteki todo listteki issueslardan birini seçerseniz projenin gelişimi açısından daha iyi olur.
