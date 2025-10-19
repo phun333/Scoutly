@@ -79,5 +79,5 @@ $DOCKER_CMD run -d \
   -e POSTGRES_USER="postgres" \
   -e POSTGRES_PASSWORD="$DB_PASSWORD" \
   -e POSTGRES_DB="$DB_NAME" \
-  -p "$DB_PORT":5432 \
+  -p "$DB_PORT":5433 \
   docker.io/postgres && echo "Database container '$DB_CONTAINER_NAME' was successfully created"
