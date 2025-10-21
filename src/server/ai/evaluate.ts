@@ -187,6 +187,7 @@ export async function evaluateSubmission(data: EvaluateSubmissionInput): Promise
       resumeAnalyzed: Boolean(data.resumeText),
       resumeTextPreview: data.resumeText ? data.resumeText.slice(0, 500) : undefined,
       resumeText: data.resumeText ?? undefined,
+      resumeUrl: data.resumeUrl ?? null,
       notes: 'Fallback heuristics kullanıldı.',
     },
   };

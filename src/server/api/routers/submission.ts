@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { evaluateSubmission } from '~/server/ai/evaluate';
+import { extractPdfTextFromBase64, extractPdfTextFromUrl } from '~/server/ai/pdf-utils';
 import type { EvaluationSettings } from '~/server/ai/types';
 import { ensureStringArray, isJsonObject } from '~/lib/json-guards';
 import { adminProcedure, createTRPCRouter, publicProcedure } from '~/server/api/trpc';
@@ -144,15 +145,40 @@ export const submissionRouter = createTRPCRouter({
 
       let resumeText: string | undefined;
       if (input.resumeFile) {
-        try {
-          const buffer = Buffer.from(input.resumeFile.base64, 'base64');
-          const pdfParse = (await import('pdf-parse')).default;
-          const parsed = await pdfParse(buffer);
+        const parsed = await extractPdfTextFromBase64(input.resumeFile.base64);
+        console.info('submissionRouter.publicSubmit: resumeFile parsed', {
+          success: parsed.success,
+          textLength: parsed.text.length,
+        });
+        if (parsed.success) {
           resumeText = parsed.text;
-        } catch (error) {
-          console.error('PDF parsing failed', error);
         }
       }
+
+      if (!resumeText && input.resumeUrl) {
+        const parsed = await extractPdfTextFromUrl(input.resumeUrl);
+        console.info('submissionRouter.publicSubmit: resumeUrl parsed', {
+          success: parsed.success,
+          textLength: parsed.text.length,
+          url: input.resumeUrl,
+        });
+        if (parsed.success) {
+          resumeText = parsed.text;
+        }
+      }
+
+      const answersWithResume: Prisma.JsonObject = { ...input.answers };
+      if (resumeText && !('__resumeExtract' in answersWithResume)) {
+        const resumeForAnswers = resumeText.length > 20000 ? `${resumeText.slice(0, 20000)}…` : resumeText;
+        answersWithResume.__resumeExtract = resumeForAnswers;
+      }
+
+      console.info('submissionRouter.publicSubmit: payload summary', {
+        applicantName: input.applicantName,
+        resumeProvided: Boolean(input.resumeFile ?? input.resumeUrl ?? false),
+        resumeTextLength: resumeText?.length ?? 0,
+        answersKeys: Object.keys(answersWithResume),
+      });
 
       const submission = await ctx.prisma.submission.create({
         data: {
@@ -160,7 +186,7 @@ export const submissionRouter = createTRPCRouter({
           applicantName: input.applicantName,
           applicantEmail: input.applicantEmail,
           resumeUrl: input.resumeUrl,
-          answers: input.answers,
+          answers: answersWithResume,
         },
       });
 
@@ -168,7 +194,7 @@ export const submissionRouter = createTRPCRouter({
 
       const evaluation = await evaluateSubmission({
         applicantName: input.applicantName,
-        answers: input.answers,
+        answers: answersWithResume,
         resumeUrl: input.resumeUrl,
         resumeText,
         formTitle: form.title,

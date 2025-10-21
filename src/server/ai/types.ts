@@ -11,9 +11,12 @@ export type EvaluationMetadata = {
     matched: boolean;
     source: 'answers' | 'resume' | 'both';
   }>;
+  modelUsed?: string;
+  aiModelAttempts?: string[];
   resumeAnalyzed?: boolean;
   resumeUrl?: string | null;
   resumeTextPreview?: string;
   resumeText?: string;
   notes?: string;
+  rawResponsePreview?: string;
 };
