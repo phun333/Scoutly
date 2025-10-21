@@ -1,9 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { LogOut, PlusCircle, Settings, Table2, Users } from 'lucide-react';
+import { PlusCircle, Settings, Table2, Users } from 'lucide-react';
 import { cn } from '~/lib/utils';
 import { Button } from '~/components/ui/button';
 import { SignOutButton } from '~/components/sign-out-button';
@@ -38,12 +39,17 @@ export function AdminSidebar() {
   return (
     <aside className="hidden w-72 flex-col border-r bg-muted/30 px-4 py-6 sm:flex">
       <header className="flex items-center justify-between gap-2 pb-6">
-        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold">
-          <span className="h-3 w-3 rounded-full bg-primary" aria-hidden /> Scoutly
+        <Link href="/dashboard" className="flex items-center gap-2 text-4xl font-semibold">
+          <Image
+            src="/scoutly-black-logo.svg"
+            alt="Scoutly logo"
+            width={48}
+            height={48}
+            className="h-12 w-12"
+            priority
+          />
+          <span>Scoutly</span>
         </Link>
-        <SignOutButton variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-          <LogOut className="h-4 w-4" aria-hidden />
-        </SignOutButton>
       </header>
 
       <nav className="flex-1 space-y-1 text-sm">
@@ -69,7 +75,6 @@ export function AdminSidebar() {
       </nav>
 
       <div className="mt-6 flex flex-col gap-3 border-t pt-4 text-xs text-muted-foreground">
-        <p>Scoutly hesabından çıkış yap veya yeni bir form oluştur.</p>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm" className="flex-1">
             <Link href="/forms/new">Yeni form</Link>
