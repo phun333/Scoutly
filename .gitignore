@@ -53,3 +53,6 @@ Thumbs.db
 # LLM related files
 AGENTS.md
 instruction.md
+
+# self requests
+screenshots/
