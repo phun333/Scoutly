@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Form, FormField } from '@prisma/client';
+import { Loader2 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
@@ -175,6 +176,7 @@ export function ApplicantForm({ form }: { form: FormWithFields }) {
       });
     }
 
+    setResult(null);
     mutation.mutate({
       formSlug: form.slug,
       applicantName,
@@ -194,12 +196,28 @@ export function ApplicantForm({ form }: { form: FormWithFields }) {
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <p>
-            Scoutly ekibi başvurunu aldı. Değerlendirme sonuçları hazır olduğunda ekibimiz sana dönüş
+            Scoutly başvurunu aldı. Değerlendirme sonuçları hazır olduğunda ekibimiz sana dönüş
             yapacak. Bu sırada e-posta kutunu takipte kal.
           </p>
-          <p className="text-xs">
-            Başvurunu güncellemek istersen aynı bağlantıyı kullanarak yeni bir başvuru gönderebilirsin.
-          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (mutation.isPending) {
+    return (
+      <Card className="border-dashed border-primary/40" aria-busy>
+        <CardHeader className="space-y-3 text-center">
+          <div className="flex justify-center">
+            <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
+          </div>
+          <CardTitle>Başvurun işleniyor</CardTitle>
+          <CardDescription>
+            Scoutly yanıtlarını ve CV’ni analiz ediyor. Bu işlem birkaç saniye sürebilir.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-center text-sm text-muted-foreground">
+          <p className="text-xs">Lütfen sayfayı kapatmayınız.</p>
         </CardContent>
       </Card>
     );

@@ -188,6 +188,39 @@ export default async function ManageFormPage({ params }: { params: Promise<{ id:
                       const keywordMatches = Array.isArray(metadataRaw?.keywordMatches)
                         ? metadataRaw.keywordMatches.filter(isKeywordMatch)
                         : [];
+                      const metadataNotes =
+                        typeof metadataRaw?.notes === 'string' && metadataRaw.notes.trim().length > 0
+                          ? metadataRaw.notes.trim()
+                          : undefined;
+                      const rawResponsePreview =
+                        typeof metadataRaw?.rawResponsePreview === 'string' &&
+                        metadataRaw.rawResponsePreview.trim().length > 0
+                          ? metadataRaw.rawResponsePreview.trim()
+                          : undefined;
+                      const resumePreview =
+                        typeof metadataRaw?.resumeTextPreview === 'string' && metadataRaw.resumeTextPreview.trim().length > 0
+                          ? metadataRaw.resumeTextPreview.trim()
+                          : undefined;
+                      const resumeFull =
+                        typeof metadataRaw?.resumeText === 'string' && metadataRaw.resumeText.trim().length > 0
+                          ? metadataRaw.resumeText.trim()
+                          : undefined;
+                      const resumeSourceUrl =
+                        typeof metadataRaw?.resumeUrl === 'string' && metadataRaw.resumeUrl.trim().length > 0
+                          ? metadataRaw.resumeUrl
+                          : submission.resumeUrl ?? undefined;
+                      const modelUsed =
+                        typeof metadataRaw?.modelUsed === 'string' && metadataRaw.modelUsed.trim().length > 0
+                          ? metadataRaw.modelUsed
+                          : undefined;
+                      const aiAttempts = Array.isArray(metadataRaw?.aiModelAttempts)
+                        ? metadataRaw.aiModelAttempts
+                            .map((attempt) => (typeof attempt === 'string' ? attempt : undefined))
+                            .filter((attempt): attempt is string => Boolean(attempt && attempt.trim().length > 0))
+                        : [];
+                      const hasResumeData = Boolean(resumePreview ?? resumeSourceUrl ?? '');
+                      const hasModelDiagnostics = Boolean(modelUsed ?? (aiAttempts.length > 0 ? 'attempts' : undefined));
+                      const hasMetadataDetails = Boolean(metadataNotes ?? rawResponsePreview ?? '');
 
                       return (
                         <CardContent className="space-y-4">
@@ -226,6 +259,69 @@ export default async function ManageFormPage({ params }: { params: Promise<{ id:
                                   </li>
                                 ))}
                               </ul>
+                            </div>
+                          )}
+                          {hasResumeData && (
+                            <div className="grid gap-2 rounded-md border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="font-medium text-foreground">CV incelemesi</p>
+                                {resumeSourceUrl && (
+                                  <Link
+                                    href={resumeSourceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                                  >
+                                    PDF&apos;yi aç
+                                  </Link>
+                                )}
+                              </div>
+                              {resumePreview && (
+                                <p className="whitespace-pre-line text-sm text-muted-foreground">
+                                  {resumePreview}
+                                </p>
+                              )}
+                              {resumeFull && (
+                                <details>
+                                  <summary className="cursor-pointer select-none text-xs font-medium text-foreground underline-offset-2 hover:underline">
+                                    Tüm CV metnini göster
+                                  </summary>
+                                  <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded bg-background/80 p-2 text-[0.65rem] text-muted-foreground">
+                                    {resumeFull}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          )}
+                          {hasModelDiagnostics && (
+                            <div className="grid gap-1 rounded-md border border-dashed border-muted/60 bg-background/40 p-3 text-[0.65rem] text-muted-foreground">
+                              {modelUsed && (
+                                <p className="font-medium text-foreground">Kullanılan AI modeli: <span className="font-normal text-muted-foreground">{modelUsed}</span></p>
+                              )}
+                              {aiAttempts.length > 0 && (
+                                <p>
+                                  Denenen modeller: {aiAttempts.join(' → ')}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          {hasMetadataDetails && (
+                            <div className="space-y-2 rounded-md border border-dashed border-destructive/60 bg-destructive/5 p-3 text-xs">
+                              {metadataNotes && (
+                                <p className="font-medium text-destructive-foreground">
+                                  AI değerlendirmesi hata notu: <span className="font-normal text-muted-foreground">{metadataNotes}</span>
+                                </p>
+                              )}
+                              {rawResponsePreview && (
+                                <details className="text-muted-foreground">
+                                  <summary className="cursor-pointer select-none text-destructive-foreground underline-offset-2 hover:underline">
+                                    Gemini yanıt önizlemesini göster
+                                  </summary>
+                                  <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded bg-background/80 p-2 text-[0.65rem]">
+                                    {rawResponsePreview}
+                                  </pre>
+                                </details>
+                              )}
                             </div>
                           )}
                         </CardContent>

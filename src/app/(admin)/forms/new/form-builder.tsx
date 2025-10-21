@@ -180,7 +180,7 @@ const fieldTypeMeta: Record<FieldType, FieldTypeMeta> = {
   },
   multiselect: {
     label: 'Çoklu seçim',
-    description: 'Adayın birden fazla seçeneği işaretleyebileceği liste.',
+    description: 'Adayların virgülle ayırarak birden fazla cevabı yazdığı alan.',
     icon: CheckSquare,
   },
   select: {
@@ -228,7 +228,7 @@ type FieldEditorProps = {
 function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEditorProps) {
   const [optionDraft, setOptionDraft] = useState('');
   const typeDetails = fieldTypeMeta[field.type];
-  const isChoiceField = field.type === 'select' || field.type === 'multiselect';
+  const isChoiceField = field.type === 'select';
   const controlErrorClass = errorMessage ? 'border-destructive focus-visible:ring-destructive' : undefined;
 
   const normalizedOptions = field.options ?? [];
@@ -297,7 +297,13 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
             <NativeSelect
               id={`type-${field.id}`}
               value={field.type}
-              onChange={(event) => onUpdate({ type: event.target.value as FieldType })}
+              onChange={(event) => {
+                const nextType = event.target.value as FieldType;
+                onUpdate({
+                  type: nextType,
+                  ...(nextType === 'select' ? {} : { options: [] }),
+                });
+              }}
             >
               {fieldTypeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -596,7 +602,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         seenKeys.set(derivedKey, field.id);
       }
 
-      if (['select', 'multiselect'].includes(field.type)) {
+      if (field.type === 'select') {
         const options = field.options?.filter(Boolean) ?? [];
         if (options.length === 0) {
           nextFieldErrors[field.id] = 'Bu alan için en az bir seçenek eklemelisin.';
@@ -630,13 +636,14 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       fields: fields.map(({ id: _id, templateId, label, helpText, placeholder, options, ...rest }) => {
         const normalizedLabel = label.trim();
         const key = templateId ?? fieldKey(normalizedLabel);
+        const normalizedOptions = rest.type === 'select' ? normalizeOptionList(options) : undefined;
         return {
           ...rest,
           label: normalizedLabel,
           key,
           helpText: toOptionalText(helpText),
           placeholder: toOptionalText(placeholder),
-          options: normalizeOptionList(options),
+          options: normalizedOptions,
         };
       }),
       evaluation:
