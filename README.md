@@ -48,6 +48,8 @@ Scoutly, işe alım ekiplerinin başvuruları saniyeler içinde ön değerlendir
 - [ ] Daha iyi bir landing page (vcombinator ahhh landing page lazım ya)
 
 ## Katkıda Bulunma
+NOTE: Anlık olarak bilinen sorunlardan dolayı bir süreliğine bu kısım kullanılamicak:
+
 Katkılar memnuniyetle karşılanır! Bir öneriniz veya düzeltmeniz varsa:
 - Issue açarak problemi veya geliştirme fikrinizi paylaşın ya da linkedin uzerinden yazabilirsiniz.
 - Üstteki todo listteki issueslardan birini seçerseniz projenin gelişimi açısından daha iyi olur.
