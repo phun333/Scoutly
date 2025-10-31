@@ -1,9 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { useEffect, useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
+  Check,
   CheckSquare,
+  Circle,
+  Eye,
   FileText,
   Hash,
   Link as LinkIcon,
@@ -14,22 +17,37 @@ import {
   Trash2,
   Type,
   X,
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
-import { Badge } from '~/components/ui/badge';
-import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '~/components/ui/card';
-import { Checkbox } from '~/components/ui/checkbox';
-import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
-import { NativeSelect } from '~/components/ui/select';
-import { Textarea } from '~/components/ui/textarea';
-import { cn } from '~/lib/utils';
-import { fieldKey, slugify } from '~/lib/slug';
-import { api } from '~/trpc/react';
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { NativeSelect } from "~/components/ui/select";
+import { Textarea } from "~/components/ui/textarea";
+import { cn } from "~/lib/utils";
+import { fieldKey, slugify } from "~/lib/slug";
+import { api } from "~/trpc/react";
 
-export type FieldType = 'text' | 'textarea' | 'select' | 'multiselect' | 'url' | 'email' | 'number' | 'markdown';
+export type FieldType =
+  | "text"
+  | "textarea"
+  | "select"
+  | "multiselect"
+  | "url"
+  | "email"
+  | "number"
+  | "markdown";
 
 type BuilderField = {
   id: string;
@@ -66,7 +84,7 @@ type InitialFormPayload = {
   title: string;
   description?: string | null;
   welcomeMessage?: string | null;
-  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED';
+  status: "ACTIVE" | "DRAFT" | "ARCHIVED";
   fields: InitialFormField[];
   evaluation?: {
     overview?: string;
@@ -77,66 +95,68 @@ type InitialFormPayload = {
 };
 
 const generateId = () =>
-  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 
 const templateFields: BuilderField[] = [
   {
     id: generateId(),
-    templateId: 'applicantName',
-    label: 'Ad Soyad',
-    type: 'text',
+    templateId: "applicantName",
+    label: "Ad Soyad",
+    type: "text",
     required: true,
-    placeholder: 'Ada Lovelace',
+    placeholder: "Ada Lovelace",
   },
   {
     id: generateId(),
-    templateId: 'applicantEmail',
-    label: 'Email adresi',
-    type: 'email',
+    templateId: "applicantEmail",
+    label: "Email adresi",
+    type: "email",
     required: true,
-    placeholder: 'ada@lovelace.dev',
+    placeholder: "ada@lovelace.dev",
   },
   {
     id: generateId(),
-    templateId: 'technologies',
-    label: 'Öne çıkan teknolojiler',
-    type: 'multiselect',
+    templateId: "technologies",
+    label: "Öne çıkan teknolojiler",
+    type: "multiselect",
     required: true,
-    helpText: 'Virgül ile ayır: React, Next.js, Prisma',
+    helpText: "Virgül ile ayır: React, Next.js, Prisma",
   },
   {
     id: generateId(),
-    templateId: 'motivation',
-    label: 'Motivasyon metni',
-    type: 'textarea',
+    templateId: "motivation",
+    label: "Motivasyon metni",
+    type: "textarea",
     required: true,
-    helpText: 'Aday rol için neden uygun olduğunu anlatsın.',
+    helpText: "Aday rol için neden uygun olduğunu anlatsın.",
   },
   {
     id: generateId(),
-    templateId: 'resumeUrl',
-    label: 'CV / Portfolyo linki',
-    type: 'url',
+    templateId: "resumeUrl",
+    label: "CV / Portfolyo linki",
+    type: "url",
     required: false,
-    helpText: 'Google Drive, GitHub veya kişisel site linki olabilir.',
+    helpText: "Google Drive, GitHub veya kişisel site linki olabilir.",
   },
   {
     id: generateId(),
-    templateId: 'yearsExperience',
-    label: 'Profesyonel deneyim (yıl)',
-    type: 'number',
+    templateId: "yearsExperience",
+    label: "Profesyonel deneyim (yıl)",
+    type: "number",
     required: true,
   },
 ];
 
-const reservedTemplateIds = new Set(templateFields.map((field) => field.templateId!));
+const reservedTemplateIds = new Set(
+  templateFields.map((field) => field.templateId!),
+);
 
 const blankField = (): BuilderField => ({
   id: generateId(),
-  label: 'Yeni alan',
-  type: 'text',
+  label: "Yeni alan",
+  type: "text",
   required: false,
 });
 
@@ -147,7 +167,7 @@ type FieldTypeMeta = {
 };
 
 const toOptionalText = (value?: string | null): string | undefined => {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     return undefined;
   }
 
@@ -155,7 +175,9 @@ const toOptionalText = (value?: string | null): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const normalizeOptionList = (entries?: string[] | null): string[] | undefined => {
+const normalizeOptionList = (
+  entries?: string[] | null,
+): string[] | undefined => {
   if (!entries) {
     return undefined;
   }
@@ -169,48 +191,58 @@ const normalizeOptionList = (entries?: string[] | null): string[] | undefined =>
 
 const fieldTypeMeta: Record<FieldType, FieldTypeMeta> = {
   text: {
-    label: 'Kısa metin',
-    description: 'Örneğin ad soyad, pozisyon veya tek satırlık cevaplar.',
+    label: "Kısa metin",
+    description: "Örneğin ad soyad, pozisyon veya tek satırlık cevaplar.",
     icon: Type,
   },
   textarea: {
-    label: 'Uzun metin',
-    description: 'Adayların deneyimlerini veya motivasyonunu anlatması için.',
+    label: "Uzun metin",
+    description: "Adayların deneyimlerini veya motivasyonunu anlatması için.",
     icon: MessageSquareText,
   },
   multiselect: {
-    label: 'Çoklu seçim',
-    description: 'Adayların virgülle ayırarak birden fazla cevabı yazdığı alan.',
+    label: "Çoklu seçim",
+    description:
+      "Adayların virgülle ayırarak birden fazla cevabı yazdığı alan.",
     icon: CheckSquare,
   },
   select: {
-    label: 'Tek seçim',
-    description: 'Listeden yalnızca bir seçenek seçilebilen alan.',
+    label: "Tek seçim",
+    description: "Listeden yalnızca bir seçenek seçilebilen alan.",
     icon: ListChecks,
   },
   url: {
-    label: 'URL',
-    description: 'Portfolyo, GitHub veya benzeri linkler için.',
+    label: "URL",
+    description: "Portfolyo, GitHub veya benzeri linkler için.",
     icon: LinkIcon,
   },
   email: {
-    label: 'Email',
-    description: 'E-posta formatı kontrolü ile güvenli bilgi toplanır.',
+    label: "Email",
+    description: "E-posta formatı kontrolü ile güvenli bilgi toplanır.",
     icon: Mail,
   },
   number: {
-    label: 'Sayısal değer',
-    description: 'Örneğin deneyim yılı veya puan gibi numerik bilgiler.',
+    label: "Sayısal değer",
+    description: "Örneğin deneyim yılı veya puan gibi numerik bilgiler.",
     icon: Hash,
   },
   markdown: {
-    label: 'Bilgi bloğu',
-    description: 'Adaylara gösterilecek talimat veya açıklama blokları.',
+    label: "Bilgi bloğu",
+    description: "Adaylara gösterilecek talimat veya açıklama blokları.",
     icon: FileText,
   },
 };
 
-const fieldTypeOrder: FieldType[] = ['text', 'textarea', 'multiselect', 'select', 'email', 'url', 'number', 'markdown'];
+const fieldTypeOrder: FieldType[] = [
+  "text",
+  "textarea",
+  "multiselect",
+  "select",
+  "email",
+  "url",
+  "number",
+  "markdown",
+];
 
 const fieldTypeOptions = fieldTypeOrder.map((type) => ({
   value: type,
@@ -225,31 +257,41 @@ type FieldEditorProps = {
   onRemove: () => void;
 };
 
-function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEditorProps) {
-  const [optionDraft, setOptionDraft] = useState('');
+function FieldEditor({
+  field,
+  index,
+  errorMessage,
+  onUpdate,
+  onRemove,
+}: FieldEditorProps) {
+  const [optionDraft, setOptionDraft] = useState("");
   const typeDetails = fieldTypeMeta[field.type];
-  const isChoiceField = field.type === 'select';
-  const controlErrorClass = errorMessage ? 'border-destructive focus-visible:ring-destructive' : undefined;
+  const isChoiceField = field.type === "select";
+  const controlErrorClass = errorMessage
+    ? "border-destructive focus-visible:ring-destructive"
+    : undefined;
 
   const normalizedOptions = field.options ?? [];
 
   const handleAddOption = () => {
     const nextValue = optionDraft.trim();
     if (!nextValue) return;
-    const hasDuplicate = normalizedOptions.some((item) => item.toLowerCase() === nextValue.toLowerCase());
+    const hasDuplicate = normalizedOptions.some(
+      (item) => item.toLowerCase() === nextValue.toLowerCase(),
+    );
     if (hasDuplicate) {
-      setOptionDraft('');
+      setOptionDraft("");
       return;
     }
     onUpdate({ options: [...normalizedOptions, nextValue] });
-    setOptionDraft('');
+    setOptionDraft("");
   };
 
   return (
     <Card
       className={cn(
-        'overflow-hidden border border-border/70 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md',
-        errorMessage && 'border-destructive/60 hover:border-destructive/70',
+        "overflow-hidden border border-border/70 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md",
+        errorMessage && "border-destructive/60 hover:border-destructive/70",
       )}
     >
       <CardHeader className="flex flex-col gap-4 border-b border-border/70 bg-muted/40 p-6 md:flex-row md:items-start md:justify-between">
@@ -258,24 +300,37 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
             <typeDetails.icon className="h-5 w-5" aria-hidden />
           </span>
           <div className="space-y-1">
-            <Badge variant="outline" className="px-2 py-0.5 text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+            <Badge
+              variant="outline"
+              className="px-2 py-0.5 text-[0.7rem] uppercase tracking-wider text-muted-foreground"
+            >
               Alan {index + 1}
             </Badge>
-            <p className="text-base font-semibold text-foreground">{typeDetails.label}</p>
-            <p className="text-sm text-muted-foreground">{typeDetails.description}</p>
+            <p className="text-base font-semibold text-foreground">
+              {typeDetails.label}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {typeDetails.description}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Badge
-            variant={field.required ? 'default' : 'outline'}
+            variant={field.required ? "default" : "outline"}
             className={cn(
-              'px-2 py-1 text-[0.7rem] uppercase tracking-wider',
-              errorMessage && 'border-destructive text-destructive',
+              "px-2 py-1 text-[0.7rem] uppercase tracking-wider",
+              errorMessage && "border-destructive text-destructive",
             )}
           >
-            {field.required ? 'Zorunlu' : 'Opsiyonel'}
+            {field.required ? "Zorunlu" : "Opsiyonel"}
           </Badge>
-          <Button type="button" variant="ghost" size="sm" onClick={onRemove} className="gap-2 text-destructive">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            className="gap-2 text-destructive"
+          >
             <Trash2 className="h-4 w-4" aria-hidden />
             Alanı kaldır
           </Button>
@@ -289,7 +344,7 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
               id={`label-${field.id}`}
               value={field.label}
               onChange={(event) => onUpdate({ label: event.target.value })}
-              className={cn('text-base font-medium', controlErrorClass)}
+              className={cn("text-base font-medium", controlErrorClass)}
             />
           </div>
           <div className="grid gap-2">
@@ -301,7 +356,7 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
                 const nextType = event.target.value as FieldType;
                 onUpdate({
                   type: nextType,
-                  ...(nextType === 'select' ? {} : { options: [] }),
+                  ...(nextType === "select" ? {} : { options: [] }),
                 });
               }}
             >
@@ -311,38 +366,60 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
                 </option>
               ))}
             </NativeSelect>
-            <p className="text-xs text-muted-foreground">{typeDetails.description}</p>
+            <p className="text-xs text-muted-foreground">
+              {typeDetails.description}
+            </p>
           </div>
-          <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/20 px-4 py-3">
-            <Checkbox
-              id={`required-${field.id}`}
-              checked={field.required}
-              onChange={(event) => onUpdate({ required: event.target.checked })}
-            />
-            <div className="space-y-1">
-              <Label htmlFor={`required-${field.id}`} className="text-sm font-medium">
-                Zorunlu alan
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Adaylar formu göndermeden önce bu alanı doldurmak zorunda olur.
-              </p>
+          <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-4">
+            <Label className="text-sm font-medium">Zorunluluk durumu</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={field.required ? "default" : "outline"}
+                className="gap-2"
+                aria-pressed={field.required}
+                onClick={() => onUpdate({ required: true })}
+              >
+                <Check className="h-4 w-4" aria-hidden />
+                Zorunlu
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={!field.required ? "default" : "outline"}
+                className="gap-2"
+                aria-pressed={!field.required}
+                onClick={() => onUpdate({ required: false })}
+              >
+                <Circle className="h-4 w-4" aria-hidden />
+                Opsiyonel
+              </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Zorunlu alanlar doldurulmadan başvuru gönderilemez. Opsiyonel
+              alanlar adaylara esneklik tanır.
+            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor={`placeholder-${field.id}`}>Placeholder</Label>
             <Input
               id={`placeholder-${field.id}`}
-              value={field.placeholder ?? ''}
-              onChange={(event) => onUpdate({ placeholder: event.target.value })}
+              value={field.placeholder ?? ""}
+              onChange={(event) =>
+                onUpdate({ placeholder: event.target.value })
+              }
               placeholder="Örn: Pozisyon, Stack, Şirket"
             />
-            <p className="text-xs text-muted-foreground">Form boşken gösterilecek örnek metin.</p>
+            <p className="text-xs text-muted-foreground">
+              Form boşken gösterilecek örnek metin.
+            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor={`help-${field.id}`}>Yardım metni</Label>
             <Textarea
               id={`help-${field.id}`}
-              value={field.helpText ?? ''}
+              value={field.helpText ?? ""}
               onChange={(event) => onUpdate({ helpText: event.target.value })}
               rows={3}
               placeholder="Adaylara bu alanı nasıl dolduracaklarını anlat."
@@ -365,7 +442,11 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
                       <button
                         type="button"
                         onClick={() =>
-                          onUpdate({ options: normalizedOptions.filter((_, idx) => idx !== optionIndex) })
+                          onUpdate({
+                            options: normalizedOptions.filter(
+                              (_, idx) => idx !== optionIndex,
+                            ),
+                          })
                         }
                         className="text-muted-foreground transition-colors hover:text-destructive"
                       >
@@ -377,7 +458,8 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Henüz seçenek yok. Aşağıdan tek tek ekleyerek profesyonel bir liste oluştur.
+                  Henüz seçenek yok. Aşağıdan tek tek ekleyerek profesyonel bir
+                  liste oluştur.
                 </p>
               )}
 
@@ -386,7 +468,7 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
                   value={optionDraft}
                   onChange={(event) => setOptionDraft(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
+                    if (event.key === "Enter") {
                       event.preventDefault();
                       handleAddOption();
                     }
@@ -406,21 +488,235 @@ function FieldEditor({ field, index, errorMessage, onUpdate, onRemove }: FieldEd
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                AI değerlendirmesi seçenekleri skorlamada kullanır. Her seçeneği net ve kısa tut.
+                AI değerlendirmesi seçenekleri skorlamada kullanır. Her seçeneği
+                net ve kısa tut.
               </p>
             </div>
           </div>
         )}
 
-        {field.type === 'markdown' && (
+        {field.type === "markdown" && (
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
-            Bu alan yalnızca bilgilendirme içeriği gösterir ve adaydan cevap toplanmaz.
+            Bu alan yalnızca bilgilendirme içeriği gösterir ve adaydan cevap
+            toplanmaz.
           </div>
         )}
 
-        {errorMessage && <p className="text-sm font-medium text-destructive">{errorMessage}</p>}
+        {errorMessage && (
+          <p className="text-sm font-medium text-destructive">{errorMessage}</p>
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+type FormPreviewProps = {
+  title: string;
+  welcomeMessage: string;
+  fields: BuilderField[];
+  headingId?: string;
+};
+
+function FormPreview({
+  title,
+  welcomeMessage,
+  fields,
+  headingId,
+}: FormPreviewProps) {
+  const displayTitle = title.trim() || "Adsız form";
+  const trimmedWelcome = welcomeMessage.trim();
+  const hasFields = fields.length > 0;
+
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <h2 id={headingId} className="text-xl font-semibold text-foreground">
+            Aday önizlemesi
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Form alanlarını düzenlerken adayın göreceği ekran aşağıda anlık
+            olarak güncellenir.
+          </p>
+        </div>
+      </div>
+      <div className="mx-auto w-full max-w-3xl">
+        <Card className="shadow-sm">
+          <CardHeader className="space-y-3">
+            <Badge
+              variant="secondary"
+              className="w-fit text-xs uppercase tracking-[0.35em]"
+            >
+              Scoutly Başvuru Formu
+            </Badge>
+            <CardTitle className="text-3xl font-semibold tracking-tight">
+              {displayTitle}
+            </CardTitle>
+            {trimmedWelcome && (
+              <p className="text-base leading-relaxed text-muted-foreground">
+                {trimmedWelcome}
+              </p>
+            )}
+          </CardHeader>
+          <CardContent>
+            {hasFields ? (
+              <div className="grid gap-5">
+                {fields.map((field) => {
+                  if (field.type === "markdown") {
+                    const label = field.label?.trim();
+                    const displayLabel = label && label.length > 0 ? label : "Bilgi bloğu";
+                    const helpText = field.helpText?.trim();
+                    const placeholderText = field.placeholder?.trim();
+                    const descriptionText =
+                      helpText && helpText.length > 0
+                        ? helpText
+                        : placeholderText && placeholderText.length > 0
+                          ? placeholderText
+                          : "Adaylara gösterilecek açıklama.";
+
+                    return (
+                      <Card
+                        key={field.id}
+                        className="border-dashed bg-secondary/30"
+                      >
+                        <CardHeader className="py-4">
+                          <CardTitle className="text-base font-semibold text-foreground">
+                            {displayLabel}
+                          </CardTitle>
+                          <CardDescription>
+                            {descriptionText}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    );
+                  }
+
+                  const normalizedOptions =
+                    field.type === "select"
+                      ? (field.options ?? [])
+                          .map((option) => option.trim())
+                          .filter(
+                            (option): option is string => option.length > 0,
+                          )
+                      : [];
+                  const hasOptions = normalizedOptions.length > 0;
+
+                  return (
+                    <div key={field.id} className="grid gap-2">
+                      <Label
+                        htmlFor={`preview-${field.id}`}
+                        className="flex items-center gap-1 text-sm font-medium text-foreground"
+                      >
+                        {field.label || "Adsız alan"}
+                        {field.required && (
+                          <span className="text-destructive">*</span>
+                        )}
+                      </Label>
+                      {(() => {
+                        switch (field.type) {
+                          case "textarea":
+                            return (
+                              <Textarea
+                                id={`preview-${field.id}`}
+                                rows={4}
+                                placeholder={field.placeholder ?? ""}
+                                disabled
+                              />
+                            );
+                          case "multiselect":
+                            return (
+                              <Textarea
+                                id={`preview-${field.id}`}
+                                rows={3}
+                                placeholder={
+                                  field.placeholder ??
+                                  "Örnek: React, Next.js, Tailwind"
+                                }
+                                disabled
+                              />
+                            );
+                          case "select":
+                            return (
+                              <div className="space-y-1">
+                                <NativeSelect
+                                  id={`preview-${field.id}`}
+                                  defaultValue=""
+                                  disabled
+                                >
+                                  <option value="">
+                                    {hasOptions
+                                      ? "Bir seçenek seç"
+                                      : "Seçenek ekle"}
+                                  </option>
+                                  {normalizedOptions.map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </NativeSelect>
+                                {!hasOptions && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Önizleme: Adayların seçim yapabilmesi için
+                                    seçenek ekle.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          default:
+                            return (
+                              <Input
+                                id={`preview-${field.id}`}
+                                type={
+                                  field.type === "number"
+                                    ? "number"
+                                    : field.type === "email"
+                                      ? "email"
+                                      : field.type === "url"
+                                        ? "url"
+                                        : "text"
+                                }
+                                placeholder={field.placeholder ?? ""}
+                                disabled
+                              />
+                            );
+                        }
+                      })()}
+                      {field.helpText && (
+                        <p className="text-xs text-muted-foreground">
+                          {field.helpText}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="preview-resume"
+                    className="flex items-center gap-1 text-sm font-medium text-foreground"
+                  >
+                    CV dosyası (PDF)
+                  </Label>
+                  <Input id="preview-resume" type="file" disabled />
+                  <p className="text-xs text-muted-foreground">
+                    PDF yükleyen adayların CV içerikleri Gemini
+                    değerlendirmesine dahil edilir.
+                  </p>
+                </div>
+
+                <Button type="button" disabled className="justify-self-start">
+                  Başvuruyu gönder
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border/70 bg-muted/30 p-6 text-sm text-muted-foreground">
+                Form alanları eklediğinde aday önizlemesi burada görüntülenecek.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </section>
   );
 }
 
@@ -429,10 +725,10 @@ type FormBuilderProps = {
 };
 
 const defaultEvaluationState: EvaluationState = {
-  overview: '',
-  mustHave: '',
-  niceToHave: '',
-  customPrompt: '',
+  overview: "",
+  mustHave: "",
+  niceToHave: "",
+  customPrompt: "",
 };
 
 export function FormBuilder({ initialForm }: FormBuilderProps) {
@@ -440,16 +736,25 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const utils = api.useUtils();
   const isEditMode = Boolean(initialForm);
 
-  const [title, setTitle] = useState(initialForm?.title ?? 'Frontend Developer Başvurusu');
-  const [description, setDescription] = useState(initialForm?.description ?? '');
-  const [welcomeMessage, setWelcomeMessage] = useState(
-    initialForm?.welcomeMessage ?? 'Deneyimini, teknolojilerini ve gerekli linkleri paylaş. Scoutly başvurunu ön elemeden geçirsin.',
+  const [title, setTitle] = useState(
+    initialForm?.title ?? "Frontend Developer Başvurusu",
   );
-  const [publish, setPublish] = useState(initialForm ? initialForm.status === 'ACTIVE' : true);
+  const [description, setDescription] = useState(
+    initialForm?.description ?? "",
+  );
+  const [welcomeMessage, setWelcomeMessage] = useState(
+    initialForm?.welcomeMessage ??
+      "Deneyimini, teknolojilerini ve gerekli linkleri paylaş. Scoutly başvurunu ön elemeden geçirsin.",
+  );
+  const [publish, setPublish] = useState(
+    initialForm ? initialForm.status === "ACTIVE" : true,
+  );
 
   const [fields, setFields] = useState<BuilderField[]>(() => {
     if (!initialForm) {
-      return templateFields.slice(0, 4).map((field) => ({ ...field, id: generateId() }));
+      return templateFields
+        .slice(0, 4)
+        .map((field) => ({ ...field, id: generateId() }));
     }
 
     return initialForm.fields
@@ -461,11 +766,17 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
         let options: string[] | undefined;
         if (Array.isArray(field.options)) {
-          options = field.options.filter((item): item is string => typeof item === 'string');
+          options = field.options.filter(
+            (item): item is string => typeof item === "string",
+          );
         } else {
-          const config = (field as Record<string, unknown>).config as { options?: unknown } | undefined;
+          const config = (field as Record<string, unknown>).config as
+            | { options?: unknown }
+            | undefined;
           if (Array.isArray(config?.options)) {
-            options = config?.options.filter((item): item is string => typeof item === 'string');
+            options = config?.options.filter(
+              (item): item is string => typeof item === "string",
+            );
           }
         }
 
@@ -485,16 +796,17 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const [evaluation, setEvaluation] = useState<EvaluationState>(() => {
     if (!initialForm?.evaluation) return defaultEvaluationState;
     return {
-      overview: initialForm.evaluation.overview ?? '',
-      mustHave: (initialForm.evaluation.mustHaveKeywords ?? []).join(', '),
-      niceToHave: (initialForm.evaluation.niceToHaveKeywords ?? []).join(', '),
-      customPrompt: initialForm.evaluation.customPrompt ?? '',
+      overview: initialForm.evaluation.overview ?? "",
+      mustHave: (initialForm.evaluation.mustHaveKeywords ?? []).join(", "),
+      niceToHave: (initialForm.evaluation.niceToHaveKeywords ?? []).join(", "),
+      customPrompt: initialForm.evaluation.customPrompt ?? "",
     };
   });
 
   const [titleError, setTitleError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const createMutation = api.form.create.useMutation({
     onSuccess: async (form) => {
@@ -520,7 +832,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const mutation = isEditMode ? updateMutation : createMutation;
 
   const updateField = (id: string, patch: Partial<BuilderField>) => {
-    setFields((prev) => prev.map((field) => (field.id === id ? { ...field, ...patch } : field)));
+    setFields((prev) =>
+      prev.map((field) => (field.id === id ? { ...field, ...patch } : field)),
+    );
     setFieldErrors((prev) => {
       if (!prev[id]) return prev;
       const next = { ...prev };
@@ -543,6 +857,21 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     setFields((prev) => [...prev, blankField()]);
   };
 
+  useEffect(() => {
+    if (!isPreviewOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsPreviewOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPreviewOpen]);
+
   const parseKeywords = (value: string): string[] =>
     value
       .split(/[\n,]/)
@@ -562,17 +891,17 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     let generalError: string | null = null;
 
     if (!trimmedTitle) {
-      setTitleError('Form başlığı zorunludur.');
-      generalError = 'Form başlığını doldurmalısın.';
+      setTitleError("Form başlığı zorunludur.");
+      generalError = "Form başlığını doldurmalısın.";
       hasError = true;
     } else if (trimmedTitle.length < 3) {
-      setTitleError('Form başlığı en az 3 karakter olmalıdır.');
-      generalError = 'Form başlığını biraz daha detaylandırmalısın.';
+      setTitleError("Form başlığı en az 3 karakter olmalıdır.");
+      generalError = "Form başlığını biraz daha detaylandırmalısın.";
       hasError = true;
     }
 
     if (fields.length === 0) {
-      generalError = 'En az bir alan eklemelisin.';
+      generalError = "En az bir alan eklemelisin.";
       hasError = true;
     }
 
@@ -581,40 +910,44 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     for (const field of fields) {
       const trimmedLabel = field.label.trim();
       if (!trimmedLabel) {
-        nextFieldErrors[field.id] = 'Alan etiketi zorunlu.';
+        nextFieldErrors[field.id] = "Alan etiketi zorunlu.";
         hasError = true;
         continue;
       }
 
       if (trimmedLabel.length < 2) {
-        nextFieldErrors[field.id] = 'Alan etiketi en az 2 karakter olmalı.';
+        nextFieldErrors[field.id] = "Alan etiketi en az 2 karakter olmalı.";
         hasError = true;
       }
 
       const derivedKey = field.templateId ?? fieldKey(trimmedLabel);
       const existingFieldId = seenKeys.get(derivedKey);
       if (existingFieldId && existingFieldId !== field.id) {
-        nextFieldErrors[field.id] = 'Bu etiket başka bir alanla çakışıyor.';
-        nextFieldErrors[existingFieldId] = 'Bu etiket başka bir alanla çakışıyor.';
-        generalError = 'Alan etiketleri benzersiz olmalı.';
+        nextFieldErrors[field.id] = "Bu etiket başka bir alanla çakışıyor.";
+        nextFieldErrors[existingFieldId] =
+          "Bu etiket başka bir alanla çakışıyor.";
+        generalError = "Alan etiketleri benzersiz olmalı.";
         hasError = true;
       } else {
         seenKeys.set(derivedKey, field.id);
       }
 
-      if (field.type === 'select') {
+      if (field.type === "select") {
         const options = field.options?.filter(Boolean) ?? [];
         if (options.length === 0) {
-          nextFieldErrors[field.id] = 'Bu alan için en az bir seçenek eklemelisin.';
+          nextFieldErrors[field.id] =
+            "Bu alan için en az bir seçenek eklemelisin.";
           hasError = true;
-          generalError ??= 'Seçilen alanlar için seçenekleri tamamlamalısın.';
+          generalError ??= "Seçilen alanlar için seçenekleri tamamlamalısın.";
         }
       }
     }
 
     if (hasError) {
       setFieldErrors(nextFieldErrors);
-      setFormError(generalError ?? 'Lütfen işaretlenen alanları düzelt ve tekrar dene.');
+      setFormError(
+        generalError ?? "Lütfen işaretlenen alanları düzelt ve tekrar dene.",
+      );
       return;
     }
 
@@ -624,7 +957,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     const evaluationPayload = {
       overview: toOptionalText(evaluation.overview),
       mustHaveKeywords: mustHaveKeywords.length ? mustHaveKeywords : undefined,
-      niceToHaveKeywords: niceToHaveKeywords.length ? niceToHaveKeywords : undefined,
+      niceToHaveKeywords: niceToHaveKeywords.length
+        ? niceToHaveKeywords
+        : undefined,
       customPrompt: toOptionalText(evaluation.customPrompt),
     };
 
@@ -633,27 +968,44 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       description: toOptionalText(description),
       welcomeMessage: toOptionalText(welcomeMessage),
       publish,
-      fields: fields.map(({ id: _id, templateId, label, helpText, placeholder, options, ...rest }) => {
-        const normalizedLabel = label.trim();
-        const key = templateId ?? fieldKey(normalizedLabel);
-        const normalizedOptions = rest.type === 'select' ? normalizeOptionList(options) : undefined;
-        return {
-          ...rest,
-          label: normalizedLabel,
-          key,
-          helpText: toOptionalText(helpText),
-          placeholder: toOptionalText(placeholder),
-          options: normalizedOptions,
-        };
-      }),
+      fields: fields.map(
+        ({
+          id: _id,
+          templateId,
+          label,
+          helpText,
+          placeholder,
+          options,
+          ...rest
+        }) => {
+          const normalizedLabel = label.trim();
+          const key = templateId ?? fieldKey(normalizedLabel);
+          const normalizedOptions =
+            rest.type === "select" ? normalizeOptionList(options) : undefined;
+          return {
+            ...rest,
+            label: normalizedLabel,
+            key,
+            helpText: toOptionalText(helpText),
+            placeholder: toOptionalText(placeholder),
+            options: normalizedOptions,
+          };
+        },
+      ),
       evaluation:
-        evaluationPayload.overview || evaluationPayload.mustHaveKeywords?.length || evaluationPayload.niceToHaveKeywords?.length || evaluationPayload.customPrompt
+        evaluationPayload.overview ||
+        evaluationPayload.mustHaveKeywords?.length ||
+        evaluationPayload.niceToHaveKeywords?.length ||
+        evaluationPayload.customPrompt
           ? evaluationPayload
           : undefined,
     };
 
     if (isEditMode) {
-      const updatePayload = structuredClone({ ...basePayload, id: initialForm!.id });
+      const updatePayload = structuredClone({
+        ...basePayload,
+        id: initialForm!.id,
+      });
       updateMutation.mutate({ json: updatePayload });
     } else {
       const createPayload = structuredClone(basePayload);
@@ -662,157 +1014,297 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-8">
-      <Card>
-        <CardHeader className="space-y-1">
-          <CardTitle>Form bilgileri</CardTitle>
-          <CardDescription>Başvurunun adı, açıklaması ve adaylara gösterilecek karşılama metni.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="form-title">Form başlığı</Label>
-            <Input
-              id="form-title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              required
-              className={cn('text-base font-semibold', titleError && 'border-destructive focus-visible:ring-destructive')}
-            />
-            {titleError && <p className="text-sm text-destructive">{titleError}</p>}
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="form-description">Kısa açıklama</Label>
-            <Textarea
-              id="form-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              rows={4}
-              placeholder="Formu birkaç cümle ile özetle."
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="form-welcome">Karşılama mesajı</Label>
-            <Textarea
-              id="form-welcome"
-              value={welcomeMessage}
-              onChange={(event) => setWelcomeMessage(event.target.value)}
-              rows={4}
-              placeholder="Adaylara süreci anlatan sıcak bir mesaj yaz."
-            />
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-3">
-            <Checkbox id="form-publish" checked={publish} onChange={(event) => setPublish(event.target.checked)} />
-            <div className="space-y-1">
-              <Label htmlFor="form-publish" className="text-sm font-medium">
-                Formu yayınla
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Yayınlanan formlar hemen /forms/{slugify(title || 'form')} adresinde erişilebilir olur.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="space-y-1">
-          <CardTitle>Değerlendirme rehberi</CardTitle>
-          <CardDescription>
-            Scoutly’nin Gemini değerlendirmesi için hangi sinyalleri arayacağını tanımla. Anahtar kelimeleri virgülle ayır.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="evaluation-overview">Genel beklenti</Label>
-            <Textarea
-              id="evaluation-overview"
-              value={evaluation.overview}
-              onChange={(event) => setEvaluation((prev) => ({ ...prev, overview: event.target.value }))}
-              rows={3}
-              placeholder="Bu rol için adaydan beklediğiniz temel sorumlulukları özetleyin."
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="evaluation-must">Zorunlu anahtar kelimeler</Label>
-            <Textarea
-              id="evaluation-must"
-              value={evaluation.mustHave}
-              onChange={(event) => setEvaluation((prev) => ({ ...prev, mustHave: event.target.value }))}
-              rows={2}
-              placeholder="Next.js, TypeScript, Liderlik"
-            />
-            <p className="text-xs text-muted-foreground">Gemini bu kelimeleri form yanıtlarında veya CV’de arayacak.</p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="evaluation-nice">Olması güzel kelimeler</Label>
-            <Textarea
-              id="evaluation-nice"
-              value={evaluation.niceToHave}
-              onChange={(event) => setEvaluation((prev) => ({ ...prev, niceToHave: event.target.value }))}
-              rows={2}
-              placeholder="Unit testing, GraphQL, AWS"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="evaluation-custom">Ek talimat</Label>
-            <Textarea
-              id="evaluation-custom"
-              value={evaluation.customPrompt}
-              onChange={(event) => setEvaluation((prev) => ({ ...prev, customPrompt: event.target.value }))}
-              rows={3}
-              placeholder="Örneğin: Proje yönetim tecrübesine özel önem ver."
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <section className="space-y-6">
-        <div className="flex flex-col gap-4 rounded-xl border bg-card/60 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Alanlar</h2>
-            <p className="text-sm text-muted-foreground">
-              Adaylardan hangi bilgileri isteyeceğini seç. Şablon alanlarıyla hızlıca başlayabilir veya özel alan ekleyebilirsin.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="button" variant="outline" onClick={addCustomField} className="gap-2">
-              <PlusCircle className="h-4 w-4" aria-hidden />
-              Özel alan ekle
+    <div className="grid gap-8">
+      {isPreviewOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="form-preview-heading"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 px-4 py-10"
+          onClick={() => setIsPreviewOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-4xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              className="absolute right-4 top-4 z-10 gap-1"
+              onClick={() => setIsPreviewOpen(false)}
+            >
+              Kapat
+              <X className="h-4 w-4" aria-hidden />
             </Button>
+            <FormPreview
+              title={title}
+              welcomeMessage={welcomeMessage}
+              fields={fields}
+              headingId="form-preview-heading"
+            />
           </div>
         </div>
-
-        <div className="grid gap-6">
-          {fields.map((field, index) => (
-            <FieldEditor
-              key={field.id}
-              field={field}
-              index={index}
-              errorMessage={fieldErrors[field.id]}
-              onUpdate={(patch) => updateField(field.id, patch)}
-              onRemove={() => removeField(field.id)}
-            />
-          ))}
-        </div>
-      </section>
-
-      {formError && (
-        <Alert variant="destructive">
-          <AlertTitle>Form kaydedilemedi</AlertTitle>
-          <AlertDescription>{formError}</AlertDescription>
-        </Alert>
       )}
 
-      <Card>
-        <CardFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Formu yayınladıktan sonra dilediğin zaman durumu değiştirebilir, alanları güncelleyebilir veya AI rehberini düzenleyebilirsin.
-          </p>
-          <Button type="submit" disabled={mutation.isPending} size="lg" className="gap-2">
-            {mutation.isPending ? 'Kaydediliyor…' : isEditMode ? 'Formu güncelle' : 'Formu oluştur'}
-          </Button>
-        </CardFooter>
-      </Card>
-    </form>
+      <form onSubmit={handleSubmit} className="grid gap-8">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle>Form bilgileri</CardTitle>
+            <CardDescription>
+              Başvurunun adı, açıklaması ve adaylara gösterilecek karşılama
+              metni.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="form-title">Form başlığı</Label>
+              <Input
+                id="form-title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                required
+                className={cn(
+                  "text-base font-semibold",
+                  titleError &&
+                    "border-destructive focus-visible:ring-destructive",
+                )}
+              />
+              {titleError && (
+                <p className="text-sm text-destructive">{titleError}</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="form-description">Kısa açıklama</Label>
+              <Textarea
+                id="form-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={4}
+                placeholder="Formu birkaç cümle ile özetle."
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="form-welcome">Karşılama mesajı</Label>
+              <Textarea
+                id="form-welcome"
+                value={welcomeMessage}
+                onChange={(event) => setWelcomeMessage(event.target.value)}
+                rows={4}
+                placeholder="Adaylara süreci anlatan sıcak bir mesaj yaz."
+              />
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-3">
+              <Checkbox
+                id="form-publish"
+                checked={publish}
+                onChange={(event) => setPublish(event.target.checked)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="form-publish" className="text-sm font-medium">
+                  Formu yayınla
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Yayınlanan formlar hemen /forms/{slugify(title || "form")}{" "}
+                  adresinde erişilebilir olur.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle>Değerlendirme rehberi</CardTitle>
+            <CardDescription>
+              Scoutly’nin AI değerlendirmesini yönlendirmek ve ekip
+              arkadaşlarının hızlıca karar vermesini sağlamak için burada
+              kriterleri tanımla. Anahtar kelimeleri virgülle ayır.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <Alert className="space-y-3 border-border/70 bg-muted/20">
+              <AlertTitle>Değerlendirme nasıl çalışır?</AlertTitle>
+              <AlertDescription className="space-y-2 text-sm">
+                <p>
+                  Başvurular önce Scoutly’nin Gemini modeli tarafından 0-100
+                  arası puanlanır, ardından ekip arkadaşların bu özet üzerinden
+                  nihai kararı verir.
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  <li>
+                    <strong>Genel beklenti</strong>: Model adayın yanıtlarını bu
+                    paragraftaki sorumluluklara göre tartar, karar özetine yön
+                    verir.
+                  </li>
+                  <li>
+                    <strong>Zorunlu anahtar kelimeler</strong>: Form yanıtında
+                    veya CV’de bulunmazsa puan kırılır ve raporda “Eksik sinyal”
+                    olarak görünür.
+                  </li>
+                  <li>
+                    <strong>Olması güzel kelimeler</strong>: Eşleşen her kelime
+                    adayın “Güçlü yönleri” listesine eklenir ve puana küçük artı
+                    değer sağlar.
+                  </li>
+                  <li>
+                    <strong>Ek talimat</strong>: AI cevap özetini bu yönergelere
+                    göre yeniden yazar; örneğin belirli bir teknolojiye öncelik
+                    vermesini isteyebilirsin.
+                  </li>
+                </ul>
+                <p>
+                  Model bazen yeterli sinyal bulamazsa, en yüksek puanı alan
+                  adayları anlamlı şekilde sıralayabilmek için form
+                  alanlarındaki teknolojilerden heuristik puan ekler.
+                </p>
+              </AlertDescription>
+            </Alert>
+            <div className="grid gap-2">
+              <Label htmlFor="evaluation-overview">Genel beklenti</Label>
+              <Textarea
+                id="evaluation-overview"
+                value={evaluation.overview}
+                onChange={(event) =>
+                  setEvaluation((prev) => ({
+                    ...prev,
+                    overview: event.target.value,
+                  }))
+                }
+                rows={3}
+                placeholder="Bu rol için adaydan beklediğiniz temel sorumlulukları özetleyin."
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="evaluation-must">Zorunlu anahtar kelimeler</Label>
+              <Textarea
+                id="evaluation-must"
+                value={evaluation.mustHave}
+                onChange={(event) =>
+                  setEvaluation((prev) => ({
+                    ...prev,
+                    mustHave: event.target.value,
+                  }))
+                }
+                rows={2}
+                placeholder="Next.js, TypeScript, Liderlik"
+              />
+              <p className="text-xs text-muted-foreground">
+                Gemini bu kelimeleri form yanıtlarında veya CV’de arayacak.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="evaluation-nice">Olması güzel kelimeler</Label>
+              <Textarea
+                id="evaluation-nice"
+                value={evaluation.niceToHave}
+                onChange={(event) =>
+                  setEvaluation((prev) => ({
+                    ...prev,
+                    niceToHave: event.target.value,
+                  }))
+                }
+                rows={2}
+                placeholder="Unit testing, GraphQL, AWS"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="evaluation-custom">Ek talimat</Label>
+              <Textarea
+                id="evaluation-custom"
+                value={evaluation.customPrompt}
+                onChange={(event) =>
+                  setEvaluation((prev) => ({
+                    ...prev,
+                    customPrompt: event.target.value,
+                  }))
+                }
+                rows={3}
+                placeholder="Örneğin: Proje yönetim tecrübesine özel önem ver."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <section className="space-y-6">
+          <div className="flex flex-col gap-4 rounded-xl border bg-card/60 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold">Alanlar</h2>
+              <p className="text-sm text-muted-foreground">
+                Adaylardan hangi bilgileri isteyeceğini seç. Şablon alanlarıyla
+                hızlıca başlayabilir veya özel alan ekleyebilirsin.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addCustomField}
+                className="gap-2"
+              >
+                <PlusCircle className="h-4 w-4" aria-hidden />
+                Özel alan ekle
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-6">
+            {fields.map((field, index) => (
+              <FieldEditor
+                key={field.id}
+                field={field}
+                index={index}
+                errorMessage={fieldErrors[field.id]}
+                onUpdate={(patch) => updateField(field.id, patch)}
+                onRemove={() => removeField(field.id)}
+              />
+            ))}
+          </div>
+        </section>
+
+        {formError && (
+          <Alert variant="destructive">
+            <AlertTitle>Form kaydedilemedi</AlertTitle>
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        <Card>
+          <CardFooter className="flex flex-col items-center gap-4 py-6 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+            <p className="text-sm text-muted-foreground">
+              Formu yayınlamadan önce nasıl göründüğünü kontrol edebilirsiniz.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2"
+              onClick={() => setIsPreviewOpen(true)}
+            >
+              <Eye className="h-4 w-4" aria-hidden />
+              Önizle
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardFooter className="flex flex-col items-center gap-4 py-6 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+            <p className="text-sm text-muted-foreground">
+              Formu yayınladıktan sonra dilediğin zaman durumu değiştirebilir,
+              alanları güncelleyebilir veya AI rehberini düzenleyebilirsin.
+            </p>
+            <Button
+              type="submit"
+              disabled={mutation.isPending}
+              size="lg"
+              className="gap-2"
+            >
+              {mutation.isPending
+                ? "Kaydediliyor…"
+                : isEditMode
+                  ? "Formu güncelle"
+                  : "Formu oluştur"}
+            </Button>
+          </CardFooter>
+        </Card>
+      </form>
+    </div>
   );
 }
