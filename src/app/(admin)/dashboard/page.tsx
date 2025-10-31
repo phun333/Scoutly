@@ -1,108 +1,151 @@
 import Link from 'next/link';
+import type { LucideIcon } from 'lucide-react';
+import { CalendarClock, ClipboardList, FilePlus, LineChart, Users } from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '~/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { createServerCaller } from '~/trpc/server';
-import { DeleteFormButton } from '~/app/(admin)/forms/manage/[id]/delete-form-button';
 
-const statusStyles: Record<'ACTIVE' | 'DRAFT' | 'ARCHIVED', { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-  ACTIVE: { label: 'Aktif', variant: 'default' },
-  DRAFT: { label: 'Taslak', variant: 'secondary' },
-  ARCHIVED: { label: 'Arşivlendi', variant: 'outline' },
-};
+const quickLinks: Array<{
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  disabled?: boolean;
+}> = [
+  {
+    title: 'Başvuruları incele',
+    description: 'AI skorlarına göre qualified / disqualified kararlarını listele.',
+    href: '/applications',
+    icon: ClipboardList,
+  },
+  {
+    title: 'Görüşmeleri planla',
+    description: 'Takvim entegrasyonunu bağla, ekip üyelerini ata ve adayla toplantı slotu paylaş.',
+    href: '/schedule',
+    icon: CalendarClock,
+  },
+  {
+    title: 'Yeni form oluştur',
+    description: 'Yeni rol için form yayınla ve paylaşım linkini ekip arkadaşlarınla paylaş.',
+    href: '/forms/new',
+    icon: FilePlus,
+  },
+  {
+    title: 'Formları yönet',
+    description: 'Alanları güncelle, AI değerlendirme rehberini düzenle ve form durumunu değiştir.',
+    href: '/forms/manage',
+    icon: Users,
+  },
+  {
+    title: 'Raporlar (yakında)',
+    description: 'Qualified oranları, risk sinyalleri ve zaman serisi analitikleri burada görülecek.',
+    href: '#',
+    icon: LineChart,
+    disabled: true,
+  },
+];
 
 export default async function DashboardPage() {
   const caller = await createServerCaller();
   const forms = await caller.form.list();
-
   const totalSubmissions = forms.reduce((sum, form) => sum + form._count.submissions, 0);
   const activeForms = forms.filter((form) => form.status === 'ACTIVE').length;
-  const archivedForms = forms.filter((form) => form.status === 'ARCHIVED').length;
 
   return (
-    <main className="flex flex-1 flex-col gap-10">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+    <main className="flex flex-1 flex-col gap-12">
+      <header className="flex flex-col gap-4 rounded-xl border bg-card/60 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <Badge variant="outline" className="w-fit bg-primary/10 text-xs uppercase tracking-wide text-primary">
+            Scoutly Insights
+          </Badge>
+          <div className="space-y-1">
             <h1 className="text-3xl font-semibold tracking-tight">İşe Alım Özeti</h1>
             <p className="text-sm text-muted-foreground">
-              {totalSubmissions} başvuru, {forms.length} form üzerinden toplandı.
+              {forms.length} form ile {totalSubmissions} başvuru toplandı. Hızlıca aksiyon almak için aşağıdaki adımları kullan.
             </p>
           </div>
-          <Button asChild size="lg">
-            <Link href="/forms/new">Yeni form oluştur</Link>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button asChild variant="outline" className="gap-2">
+            <Link href="/applications">
+              <ClipboardList className="h-4 w-4" aria-hidden />
+              Başvuruları incele
+            </Link>
           </Button>
+          <Button asChild size="lg" className="gap-2">
+            <Link href="/forms/new">
+              <FilePlus className="h-4 w-4" aria-hidden />
+              Yeni form oluştur
+            </Link>
+          </Button>
+        </div>
       </header>
 
-      <div className="grid gap-4 text-center md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-10">
-              <CardDescription>Toplam başvurular</CardDescription>
-              <CardTitle className="text-3xl font-semibold">{totalSubmissions}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Aktif formlar</CardDescription>
-              <CardTitle className="text-3xl font-semibold">{activeForms}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Arşivlenen formlar</CardDescription>
-              <CardTitle className="text-3xl font-semibold">{archivedForms}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardDescription>Toplam başvurular</CardDescription>
+            <CardTitle className="text-3xl font-semibold">{totalSubmissions}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">Formlarının tamamından gelen gönderimler.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardDescription>Aktif formlar</CardDescription>
+            <CardTitle className="text-3xl font-semibold">{activeForms}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">Aday toplamaya devam eden form sayısı.</p>
+          </CardContent>
+        </Card>
+      </section>
 
-      <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Formlar</h2>
-            <Badge variant="secondary">{forms.length} form</Badge>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-          {forms.map((form) => {
-            const status =
-              statusStyles[form.status as keyof typeof statusStyles] ?? statusStyles.DRAFT;
+      <section className="grid gap-6 lg:grid-cols-2">
+        {quickLinks.map((link) => {
+          const Icon = link.icon;
+          const isDisabled = Boolean(link.disabled);
+
+          const content = (
+            <div className="flex h-full flex-col justify-between gap-8 rounded-3xl border border-border/60 bg-background/70 p-8 text-left shadow-sm transition hover:border-primary/40 hover:shadow-lg">
+              <div className="flex items-start gap-4">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Icon className="h-7 w-7" aria-hidden />
+                </span>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-semibold text-foreground">{link.title}</h3>
+                  <p className="text-sm text-muted-foreground">{link.description}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{isDisabled ? 'Bu özellik yakında aktif olacak.' : 'Detay sayfasına giderek hemen aksiyon al.'}</span>
+                {isDisabled ? (
+                  <Badge variant="secondary" className="uppercase tracking-wide">
+                    Yakında
+                  </Badge>
+                ) : (
+                  <span className="text-sm font-medium text-primary">Detaylara git →</span>
+                )}
+              </div>
+            </div>
+          );
+
+          if (isDisabled) {
             return (
-              <Card key={form.id} className="flex flex-col justify-between">
-                  <CardHeader className="space-y-2">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <CardTitle>{form.title}</CardTitle>
-                        <CardDescription>{form.description ?? 'Bu form henüz açıklama içermiyor.'}</CardDescription>
-                      </div>
-                      <Badge variant={status.variant}>{status.label}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                    <dl className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <dt className="text-muted-foreground">Toplanan başvurular</dt>
-                        <dd className="text-2xl font-semibold text-foreground">{form._count.submissions}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted-foreground">Paylaşım linki</dt>
-                        <dd>
-                          <code className="rounded bg-secondary px-2 py-1 text-sm">/forms/{form.slug}</code>
-                        </dd>
-                      </div>
-                    </dl>
-                  </CardContent>
-                    <CardFooter className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-xs text-muted-foreground">
-                      Son güncelleme: {form.updatedAt.toLocaleDateString('tr-TR')}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" asChild>
-                        <Link href={`/forms/manage/${form.id}`}>Formu yönet</Link>
-                      </Button>
-                      <DeleteFormButton formId={form.id} formTitle={form.title} layout="inline" size="sm" />
-                    </div>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
+              <div key={link.title} className="opacity-70">
+                {content}
+              </div>
+            );
+          }
+
+          return (
+            <Link key={link.href} href={link.href} className="block">
+              {content}
+            </Link>
+          );
+        })}
       </section>
     </main>
   );
