@@ -6,6 +6,7 @@ import { extractPdfTextFromBase64, extractPdfTextFromUrl } from '~/server/ai/pdf
 import type { EvaluationSettings } from '~/server/ai/types';
 import { ensureStringArray, isJsonObject } from '~/lib/json-guards';
 import { adminProcedure, createTRPCRouter, publicProcedure } from '~/server/api/trpc';
+import { DEFAULT_PIPELINE_STAGE, normalizePipelineStage, type PipelineStage } from '~/lib/pipeline';
 
 const answerValueSchema = z.union([
   z.string(),
@@ -57,6 +58,81 @@ export const submissionRouter = createTRPCRouter({
           evaluation: true,
         },
       });
+    }),
+  byFormWithStage: adminProcedure
+    .input(
+      z.object({
+        formId: z.string().cuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const submissions = await ctx.prisma.submission.findMany({
+        where: { formId: input.formId },
+        orderBy: [{ createdAt: 'asc' }],
+        include: {
+          evaluation: true,
+        },
+      });
+
+      return submissions.map((submission) => {
+        const answers = isJsonObject(submission.answers) ? submission.answers : {};
+        const rawStage = (answers as { pipelineStage?: unknown }).pipelineStage;
+        const pipelineStage = typeof rawStage === 'string' ? normalizePipelineStage(rawStage) : null;
+        return {
+          ...submission,
+          pipelineStage,
+        };
+      });
+    }),
+  setPipelineStage: adminProcedure
+    .input(
+      z.object({
+        submissionId: z.string().cuid(),
+        stage: z.string().min(2).max(40).optional(),
+        removeFromPipeline: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const submission = await ctx.prisma.submission.findFirst({
+        where: { id: input.submissionId, form: { ownerId: ctx.session.user.id } },
+        select: { id: true, answers: true },
+      });
+
+      if (!submission) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Submission bulunamadı.' });
+      }
+
+      const answers: Record<string, unknown> = isJsonObject(submission.answers)
+        ? { ...submission.answers }
+        : {};
+      let updatedAnswers: Prisma.JsonObject;
+      let normalizedStage: PipelineStage | null = null;
+
+      if (input.removeFromPipeline) {
+        const rest = { ...answers };
+        delete rest.pipelineStage;
+        updatedAnswers = rest as Prisma.JsonObject;
+      } else {
+        normalizedStage = normalizePipelineStage(input.stage ?? DEFAULT_PIPELINE_STAGE);
+        updatedAnswers = {
+          ...answers,
+          pipelineStage: normalizedStage,
+        } as Prisma.JsonObject;
+      }
+
+      await ctx.prisma.submission.update({
+        where: { id: submission.id },
+        data: {
+          answers: updatedAnswers,
+          updatedAt: new Date(),
+        },
+      });
+
+      return {
+        submissionId: submission.id,
+        pipelineStage: normalizedStage,
+        removed: Boolean(input.removeFromPipeline),
+      };
     }),
   reevaluateAll: adminProcedure
     .input(z.object({ formId: z.string().cuid() }))
