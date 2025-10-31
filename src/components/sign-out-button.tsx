@@ -6,7 +6,7 @@ import { Button, type ButtonProps } from '~/components/ui/button';
 
 type SignOutButtonProps = ButtonProps;
 
-export function SignOutButton({ variant = 'ghost', size, className }: SignOutButtonProps) {
+export function SignOutButton({ variant = 'ghost', size, className, children, ...rest }: SignOutButtonProps) {
   const [isPending, startTransition] = useTransition();
 
   const handleClick = () => {
@@ -16,8 +16,15 @@ export function SignOutButton({ variant = 'ghost', size, className }: SignOutBut
   };
 
   return (
-    <Button variant={variant} size={size} className={className} onClick={handleClick} disabled={isPending}>
-      {isPending ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      disabled={isPending}
+      {...rest}
+      onClick={handleClick}
+    >
+      {children ?? (isPending ? 'Çıkış yapılıyor…' : 'Çıkış yap')}
     </Button>
   );
 }
